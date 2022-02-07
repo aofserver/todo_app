@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Todo Test</title>
+<link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+</head>
+<body>
+<div id="app">
+  <v-app>
+    <v-main style="background-color: #7E7E7E;">
+
+      <h1 style="text-align: center; margin-top: 30px;">Todo</h1>
+      <div style="display: flex; justify-content: center; margin: 20px;">
+        <v-btn style="background-color: #fff; height: 64px; font-size: 30px; border-radius: 50%;" @click="dialog.work = true">
+          <img src="https://www.gstatic.com/images/icons/material/colored_icons/1x/create_32dp.png"/>
+        </v-btn>
+      </div>
+
+
+      <div style="display: flex; justify-content: space-around;" v-for="item in data_list">
+        <div v-if="item.status != 'delete'" style="display: flex; width: 80%; margin: 10px; justify-content: center;" >
+          <div style="width: 100%;" @click="DoneData(item)">
+            <v-textarea
+              solo
+              :style="item.css"
+              label="add your new work."
+              hide-details=true
+              v-model="item.data"
+              disabled
+              oninput="EditData(item)"
+            ></v-textarea>
+          </div>
+          <div style="display: block; height: 100%;">
+            <!-- <div style="height: 50%;">
+              <v-btn style="width: 40px; height: 100%; background-color: goldenrod; font-size: 15px; border-radius: 0 10px 0 0" @click="EditData(item)"><h3 style="margin: 0;">🖍</h3></v-btn>
+            </div> -->
+            <div style="height: 100%;">
+              <v-btn style="width: 40px; height: 100%; background-color: red; font-size: 15px; border-radius: 0 10px 10px 0" @click="DeleteData(item)"><h3 style="margin: 0;">✗</h3></v-btn>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+
+      <v-dialog
+        v-model="dialog.work"
+        width="500"
+      >
+        <v-card>
+          <v-card-title class="text-h5 lighten-2" style="justify-content: center; background-color: #0032FF; color: #fff;">
+            Task
+          </v-card-title>
+          <v-textarea
+            solo
+            style="width: 100%; margin: auto;"
+            label="add your new work."
+            hide-details=true
+            v-model="text"
+          ></v-textarea>
+
+          <v-divider></v-divider>
+
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn
+              color="primary"
+              text
+              @click="ListDoing(); dialog.work = false;"
+              style="margin: auto;"
+            >
+              Add
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+
+    </v-main>
+  </v-app>
+</div>
+
+<style scoped>
+  /* Chrome, Safari, Edge, Opera */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* Firefox */
+  input[type=number] {
+    -moz-appearance: textfield;
+  }
+
+  h1, h2, h3, h4, h5, p, label, span{
+    font-family: "Kanit", sans-serif;
+    color: white;
+  }
+
+  input{
+    text-align:center;
+    font-family: "Kanit", sans-serif;
+  }
+
+  v-textarea{ color: blue !important }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+<script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    new Vue({
+      el: '#app',
+      delimiters: ['{{','}}'],
+      vuetify: new Vuetify(),
+      data: {
+        text:"",
+        dialog : {work:false},
+        data_list : [ {id:0, status:"doing", data:"Text1", css:""}, {id:1, status:"delete", data:"Text2", css:""}, {id:2, status:"done", data:"Text3", css:""} ],
+        css_text: { doing : "border-radius: 10px 0 0 10px;",
+                    done : "border-radius: 10px 0 0 10px; text-decoration: line-through;",
+                    delete : "border-radius: 10px 0 0 10px; display: none;"
+        },
+
+      },
+      mounted: function() {
+        for(var i=0;i<this.data_list.length;i++){
+          switch(this.data_list[i].status) {
+            case "doing": this.data_list[i].css=this.css_text.doing; break;
+            case "done": this.data_list[i].css=this.css_text.done; break;
+            case "delete": this.data_list[i].css=this.css_text.delete; break;
+            default: break;
+          }
+        }
+        console.log(this.data_list)
+      },
+      methods: {
+        ListDoing(){
+          this.data_list.push({id:this.data_list.length, status:"doing", data:this.text, css:this.css_text.doing})
+          console.log(this.text)
+          this.text = ""
+        },
+        DeleteData(item){
+          var index = this.data_list.indexOf(item);
+          this.data_list[index].status = "delete"
+          this.data_list[index].css = this.css_text.delete
+        },
+        DoneData(item){
+          var index = this.data_list.indexOf(item);
+          switch(item.status) {
+            case "doing": this.data_list[index].status = "done"
+                          this.data_list[index].css = this.css_text.done
+                          break;
+            case "done":  this.data_list[index].status = "doing"
+                          this.data_list[index].css = this.css_text.doing
+                          break;
+            default: break;
+          }
+       
+          console.log(this.data_list)
+        },
+        EditData(item){
+          console.log(item)
+        }
+      }
+    })
+  </script>
+</body>
+</html>
