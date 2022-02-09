@@ -22,23 +22,25 @@
 
       <div style="display: flex; justify-content: space-around;" v-for="item in data_list">
         <div v-if="item.status != 'delete'" style="display: flex; width: 80%; margin: 10px; justify-content: center;" >
-          <div style="width: 100%;" @click="DoneData(item)">
+          <div style="width: 100%;" @click="if(item.edit==true){ DoneData(item) }">
             <v-textarea
               solo
               :style="item.css"
               label="add your new work."
               hide-details=true
               v-model="item.data"
-              disabled
-              oninput="EditData(item)"
+              :disabled="item.edit"
             ></v-textarea>
           </div>
           <div style="display: block; height: 100%;">
-            <!-- <div style="height: 50%;">
-              <v-btn style="width: 40px; height: 100%; background-color: goldenrod; font-size: 15px; border-radius: 0 10px 0 0" @click="EditData(item)"><h3 style="margin: 0;">🖍</h3></v-btn>
-            </div> -->
-            <div style="height: 100%;">
-              <v-btn style="width: 40px; height: 100%; background-color: red; font-size: 15px; border-radius: 0 10px 10px 0" @click="DeleteData(item)"><h3 style="margin: 0;">✗</h3></v-btn>
+            <div style="height: 50%;" v-if="item.edit">
+              <v-btn style="width: 40px; height: 100%; background-color: goldenrod; font-size: 15px; border-radius: 0 10px 0 0" @click="item.edit=false"><h3 style="margin: 0;">🖍</h3></v-btn>
+            </div>
+            <div style="height: 50%;" v-else>
+              <v-btn style="width: 40px; height: 100%; background-color: limegreen; font-size: 15px; border-radius: 0 10px 0 0" @click="item.edit=true; EditData(item);"><h3 style="margin: 0;">✓</h3></v-btn>
+            </div>
+            <div style="height: 50%;">
+              <v-btn style="width: 40px; height: 100%; background-color: red; font-size: 15px; border-radius: 0 0 10px 0" @click="DeleteData(item)"><h3 style="margin: 0;">✗</h3></v-btn>
             </div>
           </div>
         </div>
@@ -105,7 +107,7 @@
     font-family: "Kanit", sans-serif;
   }
 
-  v-textarea{ color: blue !important }
+ 
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
@@ -120,7 +122,7 @@
       data: {
         text:"",
         dialog : {work:false},
-        data_list : [ {id:0, status:"doing", data:"Text1", css:""}, {id:1, status:"delete", data:"Text2", css:""}, {id:2, status:"done", data:"Text3", css:""} ],
+        data_list : [],
         css_text: { doing : "border-radius: 10px 0 0 10px;",
                     done : "border-radius: 10px 0 0 10px; text-decoration: line-through;",
                     delete : "border-radius: 10px 0 0 10px; display: none;"
@@ -130,9 +132,9 @@
       mounted: function() {
         for(var i=0;i<this.data_list.length;i++){
           switch(this.data_list[i].status) {
-            case "doing": this.data_list[i].css=this.css_text.doing; break;
-            case "done": this.data_list[i].css=this.css_text.done; break;
-            case "delete": this.data_list[i].css=this.css_text.delete; break;
+            case "doing": this.data_list[i].css=this.css_text.doing; this.data_list[i].edit=true; break;
+            case "done": this.data_list[i].css=this.css_text.done; this.data_list[i].edit=true; break;
+            case "delete": this.data_list[i].css=this.css_text.delete; this.data_list[i].edit=true; break;
             default: break;
           }
         }
@@ -140,8 +142,7 @@
       },
       methods: {
         ListDoing(){
-          this.data_list.push({id:this.data_list.length, status:"doing", data:this.text, css:this.css_text.doing})
-          console.log(this.text)
+          this.data_list.push({id:this.data_list.length, status:"doing", data:this.text, css:this.css_text.doing, edit:true})
           this.text = ""
         },
         DeleteData(item){

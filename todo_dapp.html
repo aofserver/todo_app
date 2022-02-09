@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Todo Dapp Test</title>
+<link rel="icon" href="https://docs.metamask.io/metamask-fox.svg">
+<link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+</head>
+<body>
+<div id="app">
+  <v-app>
+    <v-main style="background-color: #7E7E7E;">
+
+      <h1 style="text-align: center; margin-top: 30px;">Todo Dapp</h1>
+      <div v-if="metamask.address != ''">
+        <h3 style="text-align: center; margin-top: 10px;">{{metamask.address}}</h3>
+        <div style="width: 300px; display: flex; margin: 10px auto 10px auto;">
+          <v-select :items="items_chain" label="Select Chain Testnet" solo v-model="chain" v-on:change="SelectChain">
+              <template v-slot:selection="{ item, index }"> 
+                <img :src="item.image" style="width: 30px; border-radius: 10%; margin: 10px;">{{ item.name }}
+              </template>
+              </template>
+              <template v-slot:item="{ item }">
+                <img :src="item.image" style="width: 30px; border-radius: 10%; margin: 10px;">{{ item.name }}
+              </template>
+          </v-select>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: center;" v-else>
+        <v-btn style="width: 200px; height: 80px; margin: 10px;" @click="Login()">
+          <div style="display: block;">
+          <div><img src="https://docs.metamask.io/metamask-fox.svg" style="width: 200 px;"/></div>
+          <div><p style="font-size: 12px; color: black; margin: 0;">Connect to wallet</p></div>
+          </div>
+        </v-btn>
+      </div>
+      <div style="display: flex; justify-content: center; margin: 20px;">
+        <v-btn style="background-color: #fff; height: 64px; font-size: 30px; border-radius: 50%;" @click="dialog.work = true">
+          <img src="https://www.gstatic.com/images/icons/material/colored_icons/1x/create_32dp.png"/>
+        </v-btn>
+      </div>
+
+
+      <div style="display: flex; justify-content: space-around;" v-for="item in data_list">
+        <div v-if="item.status != 'delete'" style="display: flex; width: 80%; margin: 10px; justify-content: center;" >
+          <div style="width: 100%;" @click="if(item.edit==true){ DoneTask(item) }">
+            <v-textarea
+              solo
+              :style="item.css"
+              label=""
+              hide-details=true
+              v-model="item.data"
+              :disabled="item.edit"
+            ></v-textarea>
+          </div>
+          <div style="display: block; height: 100%;">
+            <div style="height: 50%;" v-if="item.edit">
+              <v-btn style="width: 40px; height: 100%; background-color: goldenrod; font-size: 15px; border-radius: 0 10px 0 0" @click="item.edit=false"><h3 style="margin: 0;">🖍</h3></v-btn>
+            </div>
+            <div style="height: 50%;" v-else>
+              <v-btn style="width: 40px; height: 100%; background-color: limegreen; font-size: 15px; border-radius: 0 10px 0 0" @click="item.edit=true; EditTask(item);"><h3 style="margin: 0;">✓</h3></v-btn>
+            </div>
+            <div style="height: 50%;">
+              <v-btn style="width: 40px; height: 100%; background-color: red; font-size: 15px; border-radius: 0 0 10px 0" @click="DeleteTask(item)"><h3 style="margin: 0;">✗</h3></v-btn>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+
+      <v-dialog
+        v-model="dialog.work"
+        width="500"
+      >
+        <v-card>
+          <v-card-title class="text-h5 lighten-2" style="justify-content: center; background-color: #0032FF; color: #fff;">
+            Task
+          </v-card-title>
+          <v-textarea
+            solo
+            style="width: 100%; margin: auto;"
+            label="add your new work."
+            hide-details=true
+            v-model="text"
+          ></v-textarea>
+
+          <v-divider></v-divider>
+
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn
+              color="primary"
+              text
+              @click="AddTask(); dialog.work = false;"
+              style="margin: auto;"
+            >
+              Add
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <v-dialog
+        v-model="dialog.transaction"
+        persistent
+        max-width="400"
+      >
+        <v-card>
+          <template v-if="transaction.tx_hash == ''">
+            <v-card-title class="text-h5" style="justify-content: center;">
+              Waiting transaction.
+            </v-card-title>
+            <v-card-text style="text-align: center;">Wait until the transaction is successful.</v-card-text>
+            <v-skeleton-loader
+              class="mx-auto"
+              max-width="300"
+              type="image"
+            ></v-skeleton-loader>
+            <v-skeleton-loader
+              class="mx-auto"
+              style="margin: 10px; height: 30px;"
+              max-width="200"
+              type="image"
+            ></v-skeleton-loader>
+          </template>
+          <template v-else>
+            <v-card-title class="text-h5" style="justify-content: center;">
+              Transaction.
+            </v-card-title>
+            <v-card-text style="text-align: center;">Scan the QR Code or <a target="_blank" :href="transaction.tx_url">click</a> to view the transaction.</v-card-text>
+            <div style="width: 200px; height: 200px; margin: 0 auto 0 auto;">
+              <img style="width: 100%;" :src="transaction.tx_qr" />
+            </div>
+            <p style="text-align: center; font-size: 10px;">{{transaction.tx_hash}}</p>
+          </template>
+          
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn
+              color="red darken-1"
+              text
+              @click="dialog.transaction = false; transaction.tx_hash=''; transaction.tx_qr=''; transaction.tx_url='';"
+            >
+              ปิด
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <v-dialog
+        v-model="dialog.transaction_fail"
+        persistent
+        max-width="400"
+      >
+        <v-card>
+          <v-card-title class="text-h5" style="justify-content: center; color: red;">
+            Transaction Fail.
+          </v-card-title>
+          <v-card-text style="text-align: center;">Check functions condition in <a target="_blank" :href="contract.code">Smart Contract</a>.</v-card-text>
+          <div style="width: 200px; height: 200px; margin: 0 auto 0 auto;">
+            <img style="width: 100%;" :src="'https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl='+contract.code+'&choe=UTF-8'" />
+          </div>
+          <p style="text-align: center; font-size: 15px;">Code Smart Contract</p>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn
+              color="red darken-1"
+              text
+              @click="dialog.transaction_fail = false; transaction.tx_hash=''; transaction.tx_qr=''; transaction.tx_url='';"
+            >
+              ปิด
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+
+    </v-main>
+  </v-app>
+</div>
+
+<style scoped>
+  /* Chrome, Safari, Edge, Opera */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* Firefox */
+  input[type=number] {
+    -moz-appearance: textfield;
+  }
+
+  h1, h2, h3, h4, h5, p, label, span{
+    font-family: "Kanit", sans-serif;
+    color: white;
+  }
+
+  input{
+    text-align:center;
+    font-family: "Kanit", sans-serif;
+  }
+
+ 
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+<script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.0/web3.min.js" integrity="sha512-C63V0mFzwl8KV2fRz0QJNKX0d9877urOLSUq5WUq8nUOhDl69hKdGr9mAvl57k47GNjqEMAtiufsvDnk7xs8+w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+    new Vue({
+      el: '#app',
+      delimiters: ['{{','}}'],
+      vuetify: new Vuetify(),
+      data: {
+        text:"",
+        dialog : {work:false,transaction:false,transaction_fail:false},
+        data_list : [],
+        css_text: { doing : "border-radius: 10px 0 0 10px;",
+                    done : "border-radius: 10px 0 0 10px; text-decoration: line-through;",
+                    delete : "border-radius: 10px 0 0 10px; display: none;"
+        },
+        chain:{},
+        items_chain: [
+                { name: 'Ethereum TESTNET', symbol:'eth_testnet', image: "https://avatars.githubusercontent.com/u/6250754?s=200&v=4"},
+                { name: 'Binance TESTNET', symbol:'bsc_testnet', image: "https://avatars.githubusercontent.com/u/32770468?s=200&v=4"},
+                { name: 'Bitkub TESTNET', symbol:'bkc_testnet', image: "https://support.bitkub.com/hc/article_attachments/4403997327629/image.png"},
+                { name: 'REI TESTNET', symbol:'rei_testnet', image: "https://reichain.io/images/text-logo.svg"},
+              ],
+        metamask : {
+                    nameNetwork:'',
+                    networkExplorer:'',
+                    chainId:'',
+                    address:'',
+                    balance:'0',
+                    gasPrice:'0',
+                    addChain:{
+                      eth_testnet:{
+                                    rpc:"https://ropsten.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161/",
+                                    symbol:"ETH",
+                                    chainId:"3",
+                                    chainName:"Network Ropsten",
+                                    blockExplorerUrls:"https://ropsten.etherscan.io/"
+                                  },
+                      bsc_testnet:{
+                                    rpc:"https://data-seed-prebsc-1-s1.binance.org:8545/",
+                                    symbol:"BNB",
+                                    chainId:"97",
+                                    chainName:"BSC-Testnet",
+                                    blockExplorerUrls:"https://testnet.bscscan.com/"
+                                  },
+                      bkc_testnet:{
+                                    rpc:"https://bkc-posa.bitkubchain.io/",
+                                    symbol:"KUB",
+                                    chainId:"25926",
+                                    chainName:"KUB-Testnet",
+                                    blockExplorerUrls:"https://testnet-posa.bkcscan.com/"
+                                  },
+                      rei_testnet:{
+                                    rpc:"https://rei-testnet-rpc.moonrhythm.io/",
+                                    symbol:"REI",
+                                    chainId:"55556",
+                                    chainName:"REI-Testnet",
+                                    blockExplorerUrls:"https://testnet.reiscan.com/"
+                                  },
+                    }
+        },
+        smratContract:"",
+        contract:{
+          eth_testnet:{
+                    nameNetwork:"ETH_TESTNET",
+                    address:"0x6F3d4fE62aB4a79649fDaD240dAE1200232F106A",
+                    abi:[{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"constant":false,"inputs":[{"internalType":"string","name":"_text","type":"string"}],"name":"addtask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"deletetask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"destroytask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"donetask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"},{"internalType":"string","name":"_text","type":"string"}],"name":"edittask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"lentask","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"redoingtask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"task","outputs":[{"internalType":"string","name":"text","type":"string"},{"internalType":"string","name":"status","type":"string"}],"payable":false,"stateMutability":"view","type":"function"}],
+                    code:'',
+                  },
+
+          bsc_testnet:{
+                    nameNetwork:"BSC_TESTNET",
+                    address:"0xD20bA35233A66526c24cd07592D00CEB96aB262E",
+                    abi:[{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"constant":false,"inputs":[{"internalType":"string","name":"_text","type":"string"}],"name":"addtask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"deletetask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"destroytask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"donetask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"},{"internalType":"string","name":"_text","type":"string"}],"name":"edittask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"lentask","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"redoingtask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"task","outputs":[{"internalType":"string","name":"text","type":"string"},{"internalType":"string","name":"status","type":"string"}],"payable":false,"stateMutability":"view","type":"function"}],
+                    code:'',
+                  },
+          bkc_testnet:{
+                    nameNetwork:"KUB_TESTNET",
+                    address:"0x5267286A8bcfbbe6ef0aE82d76e16e2d89232DDA",
+                    abi:[{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"constant":false,"inputs":[{"internalType":"string","name":"_text","type":"string"}],"name":"addtask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"deletetask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"destroytask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"donetask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"},{"internalType":"string","name":"_text","type":"string"}],"name":"edittask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"lentask","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"redoingtask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"task","outputs":[{"internalType":"string","name":"text","type":"string"},{"internalType":"string","name":"status","type":"string"}],"payable":false,"stateMutability":"view","type":"function"}],
+                    code:'',
+                  },
+          rei_testnet:{
+                    nameNetwork:"REI_TESTNET",
+                    address:"0x5267286A8bcfbbe6ef0aE82d76e16e2d89232DDA",
+                    abi:[{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"constant":false,"inputs":[{"internalType":"string","name":"_text","type":"string"}],"name":"addtask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"deletetask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"destroytask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"donetask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"},{"internalType":"string","name":"_text","type":"string"}],"name":"edittask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"lentask","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"redoingtask","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"task","outputs":[{"internalType":"string","name":"text","type":"string"},{"internalType":"string","name":"status","type":"string"}],"payable":false,"stateMutability":"view","type":"function"}],
+                    code:'',
+                  }
+                  
+        },
+        transaction:{
+          tx_hash:"",
+          tx_url:"",
+          tx_qr:"",
+        }
+
+      },
+      mounted: function() {
+        const ethereum = window.ethereum
+        if (ethereum) {
+          console.log('Ethereum successfully detected!')
+        } else {
+          console.log('Please install MetaMask!', error)
+        } 
+        if (typeof(window.ethereum) !== 'undefined') {
+          console.log('MetaMask is installed!');
+          this.GetChainId()
+        }
+      },
+      methods: {
+        NetworkChange(){
+          setInterval(()=>{ 
+            ethereum.request({ method: 'eth_chainId'}).then((res)=>{
+              if(res != this.metamask.chainId){
+                this.GetChainId()
+              }
+            });
+          }, 500);
+        },
+        SelectChain(value){
+          ethereum.request({
+            id: 1,
+            jsonrpc: "2.0",
+            method: "wallet_addEthereumChain",
+            params: [
+              {
+                chainId: "0x"+parseInt(this.metamask.addChain[value.symbol].chainId).toString(16),
+                rpcUrls: [this.metamask.addChain[value.symbol].rpc],
+                chainName: this.metamask.addChain[value.symbol].chainName,
+                nativeCurrency: {
+                  name: this.metamask.addChain[value.symbol].symbol,
+                  symbol: this.metamask.addChain[value.symbol].symbol, 
+                  decimals: 18,
+                },
+                blockExplorerUrls: [this.metamask.addChain[value.symbol].blockExplorerUrls],
+              },
+            ],
+          }).then((res)=>{ this.GetChainId() })
+        },
+        SetCss(){
+          for(var i=0;i<this.data_list.length;i++){
+            switch(this.data_list[i].status) {
+              case "doing": this.data_list[i].css=this.css_text.doing; this.data_list[i].edit=true; break;
+              case "done": this.data_list[i].css=this.css_text.done; this.data_list[i].edit=true; break;
+              case "delete": this.data_list[i].css=this.css_text.delete; this.data_list[i].edit=true; break;
+              default: break;
+            }
+          }
+        },
+        async GetChainId(){
+          // https://chainlist.org/
+          ethereum.request({ method: 'eth_chainId'}).then((res)=>{
+            this.metamask.chainId = parseInt(res)
+            console.log("chainId",parseInt(res))
+            switch(this.metamask.chainId) {
+              case 3:
+                this.metamask.nameNetwork = "Ropsten Test Network"
+                this.metamask.networkExplorer =  "https://ropsten.etherscan.io/"
+                this.chain = { name: 'Ethereum TESTNET', symbol:'eth_testnet', image: "https://avatars.githubusercontent.com/u/6250754?s=200&v=4"}
+                break;
+              case 97:
+                this.metamask.nameNetwork = "BSC-Test"
+                this.metamask.networkExplorer =  "https://testnet.bscscan.com/"
+                this.chain = { name: 'Binance TESTNET', symbol:'bsc_testnet', image: "https://avatars.githubusercontent.com/u/32770468?s=200&v=4"}
+                break;
+              case 25926:
+                this.metamask.nameNetwork = "KUB-Test"
+                this.metamask.networkExplorer =  "https://testnet-posa.bkcscan.com/"
+                this.chain = { name: 'Bitkub TESTNET', symbol:'bkc_testnet', image: "https://support.bitkub.com/hc/article_attachments/4403997327629/image.png"}
+                break;
+              case 55556:
+                this.metamask.nameNetwork = "REI-Test"
+                this.metamask.networkExplorer =  "https://testnet.reiscan.com/"
+                this.chain = { name: 'REI TESTNET', symbol:'rei_testnet', image: "https://reichain.io/images/text-logo.svg"}
+                break;
+              default:
+                this.metamask.nameNetwork = "Unknow Network"
+                this.metamask.networkExplorer =  "/"
+                this.chain = {}
+            }
+
+            if(this.chain.symbol != undefined){
+              const web3 = new Web3(window.web3.currentProvider);
+              this.smratContract = new web3.eth.Contract(this.contract[this.chain.symbol].abi,this.contract[this.chain.symbol].address)
+            }
+
+            this.contract.code = this.metamask.networkExplorer + "/address/"+this.contract.address+"#code"
+            this.Login()
+          })
+        },
+        Login(){
+          ethereum.request({ method: 'eth_requestAccounts' }).then((res)=>{
+            console.log("Address login : ",res)
+            this.metamask.address = res[0]
+            this.GetGasPrice()
+            this.NetworkChange()
+            if(this.chain.symbol != undefined){
+              this.LenTask()
+            }
+          });
+        },
+        GetGasPrice(){
+          ethereum.request({
+            "method":"eth_gasPrice",
+            "params":[],
+            "id":73
+          }).then((res)=>{
+            console.log("GasPrice : ",res)
+            this.metamask.gasPrice = parseInt(res)
+          });
+        },
+        async ListTask(loop){
+          this.data_list = []
+          let result;
+          for(var i=0;i<loop;i++){
+            result = await this.smratContract.methods.task(this.metamask.address,i.toString())
+            result = await result.call()
+            this.data_list.push({id:this.data_list.length, status:result.status, data:result.text, css:"", edit:true})
+            this.SetCss();
+          }
+        },
+        LenTask(){
+          this.smratContract.methods.lentask().call({from:this.metamask.address}).then((res)=>{
+            this.ListTask(res);
+          });
+        },
+        AddTask(){
+          this.dialog.transaction = true;
+          this.smratContract.methods.addtask(this.text).send({from:this.metamask.address}).then((tx)=>{
+            this.transaction.tx_hash = tx.transactionHash
+            this.transaction.tx_url = this.metamask.networkExplorer+"tx/"+tx.transactionHash
+            this.transaction.tx_qr = "https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl="+this.transaction.tx_url+"&choe=UTF-8"
+            this.LenTask()
+            console.log(this.metamask.networkExplorer+"tx/"+tx.transactionHash)
+          }).catch((err)=>{
+            console.log(err)
+            this.dialog.transaction_fail = true
+            this.dialog.transaction = false; this.transaction.tx_hash=''; this.transaction.tx_qr=''; this.transaction.tx_url='';
+          });
+        },
+        DoneTask(item){
+          if(item.status == "doing"){
+            this.dialog.transaction = true;
+            this.smratContract.methods.donetask(item.id).send({from:this.metamask.address}).then((tx)=>{
+              this.transaction.tx_hash = tx.transactionHash
+              this.transaction.tx_url = this.metamask.networkExplorer+"tx/"+tx.transactionHash
+              this.transaction.tx_qr = "https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl="+this.transaction.tx_url+"&choe=UTF-8"
+              this.LenTask()
+              console.log(this.metamask.networkExplorer+"tx/"+tx.transactionHash)
+            }).catch((err)=>{
+              console.log(err)
+              this.dialog.transaction_fail = true
+              this.dialog.transaction = false; this.transaction.tx_hash=''; this.transaction.tx_qr=''; this.transaction.tx_url='';
+            });
+          }
+          else if(item.status == "done"){
+            this.dialog.transaction = true;
+            this.smratContract.methods.redoingtask(item.id).send({from:this.metamask.address}).then((tx)=>{
+              this.transaction.tx_hash = tx.transactionHash
+              this.transaction.tx_url = this.metamask.networkExplorer+"tx/"+tx.transactionHash
+              this.transaction.tx_qr = "https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl="+this.transaction.tx_url+"&choe=UTF-8"
+              this.LenTask()
+              console.log(this.metamask.networkExplorer+"tx/"+tx.transactionHash)
+            }).catch((err)=>{
+              console.log(err)
+              this.dialog.transaction_fail = true
+              this.dialog.transaction = false; this.transaction.tx_hash=''; this.transaction.tx_qr=''; this.transaction.tx_url='';
+            });
+          }
+        },
+        DeleteTask(item){
+          this.dialog.transaction = true;
+          this.smratContract.methods.deletetask(item.id).send({from:this.metamask.address}).then((tx)=>{
+            this.transaction.tx_hash = tx.transactionHash
+            this.transaction.tx_url = this.metamask.networkExplorer+"tx/"+tx.transactionHash
+            this.transaction.tx_qr = "https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl="+this.transaction.tx_url+"&choe=UTF-8"
+            this.LenTask()
+            console.log(this.metamask.networkExplorer+"tx/"+tx.transactionHash)
+          }).catch((err)=>{
+            console.log(err)
+            this.dialog.transaction_fail = true
+            this.dialog.transaction = false; this.transaction.tx_hash=''; this.transaction.tx_qr=''; this.transaction.tx_url='';
+          });
+        },
+        EditTask(item){
+          console.log(item.id)
+          this.dialog.transaction = true;
+          this.smratContract.methods.edittask(item.id,item.data).send({from:this.metamask.address}).then((tx)=>{
+            this.transaction.tx_hash = tx.transactionHash
+            this.transaction.tx_url = this.metamask.networkExplorer+"tx/"+tx.transactionHash
+            this.transaction.tx_qr = "https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl="+this.transaction.tx_url+"&choe=UTF-8"
+            this.LenTask()
+            console.log(this.metamask.networkExplorer+"tx/"+tx.transactionHash)
+          }).catch((err)=>{
+            console.log(err)
+            this.dialog.transaction_fail = true
+            this.dialog.transaction = false; this.transaction.tx_hash=''; this.transaction.tx_qr=''; this.transaction.tx_url='';
+          });
+        },
+      }
+    })
+  </script>
+</body>
+</html>
