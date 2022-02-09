@@ -13,9 +13,10 @@
   <v-app>
     <v-main style="background-color: #7E7E7E;">
 
-      <h1 style="text-align: center; margin-top: 30px;">Todo Dapp</h1>
+      <h1 style="text-align: center; margin-top: 30px;" @click="dialog.faucet = true;">Todo Dapp</h1>
       <div v-if="metamask.address != ''">
         <h3 style="text-align: center; margin-top: 10px;">{{metamask.address}}</h3>
+        <h3 style="text-align: center; margin: 10px; cursor: pointer; " @click="dialog.faucet = true;"><u>faucet</u></h3>
         <div style="width: 300px; display: flex; margin: 10px auto 10px auto;">
           <v-select :items="items_chain" label="Select Chain Testnet" solo v-model="chain" v-on:change="SelectChain">
               <template v-slot:selection="{ item, index }"> 
@@ -170,7 +171,43 @@
               text
               @click="dialog.transaction_fail = false; transaction.tx_hash=''; transaction.tx_qr=''; transaction.tx_url='';"
             >
-              ปิด
+            Close
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <v-dialog
+        v-model="dialog.faucet"
+        width="500"
+      >
+        <v-card>
+          <v-card-title class="text-h5 lighten-2" style="justify-content: center; background-color: #0032FF; color: #fff;">
+            Faucet
+          </v-card-title>
+          <!-- <v-textarea
+            solo
+            style="width: 100%; margin: auto;"
+            label="add your new work."
+            hide-details=true
+            v-model="text"
+          ></v-textarea> -->
+          <div v-for="item in faucet" style="text-align: center;">
+            <a :href="item" target="_blank"><p style="color: black; margin: 20px;">{{item}}</p></a>
+            
+          </div>
+
+          <v-divider></v-divider>
+
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn
+              color="primary"
+              text
+              @click="dialog.faucet = false;"
+              style="margin: auto;"
+            >
+              Close
             </v-btn>
           </v-card-actions>
         </v-card>
@@ -219,7 +256,7 @@
       vuetify: new Vuetify(),
       data: {
         text:"",
-        dialog : {work:false,transaction:false,transaction_fail:false},
+        dialog : {work:false,transaction:false,transaction_fail:false,faucet:false},
         data_list : [],
         css_text: { doing : "border-radius: 10px 0 0 10px;",
                     done : "border-radius: 10px 0 0 10px; text-decoration: line-through;",
@@ -303,8 +340,13 @@
           tx_hash:"",
           tx_url:"",
           tx_qr:"",
+        },
+        faucet:{
+          eth:"https://faucet.metamask.io/",
+          bnb:"https://testnet.binance.org/faucet-smart",
+          kub:"https://faucet-posa.bitkubchain.com/",
+          rei:"https://kururu.finance/faucet?chainId=55556",
         }
-
       },
       mounted: function() {
         const ethereum = window.ethereum
